@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j; // Added for @Slf4j
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,10 +19,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j // Added Lombok annotation
 public class BinanceExchangeDataServiceImpl implements ExchangeDataService {
 
-    private static final Logger logger = LoggerFactory.getLogger(BinanceExchangeDataServiceImpl.class); // Updated logger
-
+    // private static final Logger logger = LoggerFactory.getLogger(BinanceExchangeDataServiceImpl.class); // Removed
     private final SpotClient spotClient;
     private final BinanceConfig binanceConfig;
 
@@ -32,7 +33,7 @@ public class BinanceExchangeDataServiceImpl implements ExchangeDataService {
             binanceConfig.getApiSecret() != null && !binanceConfig.getApiSecret().equals("YOUR_BINANCE_API_SECRET")) {
             this.spotClient = new SpotClientImpl(binanceConfig.getApiKey(), binanceConfig.getApiSecret());
         } else {
-            logger.warn("Binance API key/secret not configured or using placeholder values. Binance client will use no-args constructor (limited functionality).");
+            log.warn("Binance API key/secret not configured or using placeholder values. Binance client will use no-args constructor (limited functionality)."); // logger to log
             this.spotClient = new SpotClientImpl();
         }
     }
@@ -89,7 +90,7 @@ public class BinanceExchangeDataServiceImpl implements ExchangeDataService {
             // Placeholder for actual parsing - this is a complex part.
             // The binance-connector-java klines method returns a String, which is a JSON array of arrays.
             // The result is a JSON string representing List<List<Object>>
-            logger.debug("Fetched klines string for {}: {}", symbol, result.substring(0, Math.min(result.length(), 500)) + "...");
+            log.debug("Fetched klines string for {}: {}", symbol, result.substring(0, Math.min(result.length(), 500)) + "..."); // logger to log
 
             ObjectMapper objectMapper = new ObjectMapper();
             List<List<Object>> klineData = objectMapper.readValue(result, new TypeReference<List<List<Object>>>(){});
@@ -111,13 +112,13 @@ public class BinanceExchangeDataServiceImpl implements ExchangeDataService {
                         // klineEntry.get(11) is "Ignore."
                     );
                 } catch (Exception e) {
-                    logger.error("Error parsing individual kline entry for symbol {}: {}. Entry: {}", symbol, e.getMessage(), klineEntry, e);
+                    log.error("Error parsing individual kline entry for symbol {}: {}. Entry: {}", symbol, e.getMessage(), klineEntry, e); // logger to log
                     return null;
                 }
             }).filter(candlestick -> candlestick != null).collect(Collectors.toList());
 
         } catch (Exception e) { // Catches JsonProcessingException from objectMapper and other exceptions
-            logger.error("Error fetching or parsing candlestick data for symbol {}: {}", symbol, e.getMessage(), e);
+            log.error("Error fetching or parsing candlestick data for symbol {}: {}", symbol, e.getMessage(), e); // logger to log
             return new ArrayList<>();
         }
     }

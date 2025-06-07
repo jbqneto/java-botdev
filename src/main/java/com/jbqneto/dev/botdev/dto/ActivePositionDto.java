@@ -1,7 +1,13 @@
 package com.jbqneto.dev.botdev.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.ta4j.core.num.Num;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ActivePositionDto {
     private String symbol;
     private Num entryPrice;
@@ -15,6 +21,12 @@ public class ActivePositionDto {
         LONG, SHORT
     }
 
+    // Manual constructor to set timestamp, if needed, or rely on @AllArgsConstructor and set it post-creation
+    // For simplicity with @AllArgsConstructor, we might need to adjust how timestamp is set if it's always system-generated.
+    // Let's assume @AllArgsConstructor will cover all fields, and timestamp can be set if needed,
+    // or the DTO is created and then timestamp is set if it's purely for "moment of creation in memory".
+    // The previous constructor set it to System.currentTimeMillis().
+    // If that behavior is desired with an all-args constructor that doesn't include it:
     public ActivePositionDto(String symbol, Num entryPrice, Num quantity, PositionSide side, Num entryCandleLow, Num entryCandleHigh) {
         this.symbol = symbol;
         this.entryPrice = entryPrice;
@@ -22,77 +34,14 @@ public class ActivePositionDto {
         this.side = side;
         this.entryCandleLow = entryCandleLow;
         this.entryCandleHigh = entryCandleHigh;
-        this.entryTimestamp = System.currentTimeMillis();
+        this.entryTimestamp = System.currentTimeMillis(); // Keep this specific logic
     }
-
-    // Getters
-    public String getSymbol() {
-        return symbol;
-    }
-
-    public Num getEntryPrice() {
-        return entryPrice;
-    }
-
-    public Num getQuantity() {
-        return quantity;
-    }
-
-    public PositionSide getSide() {
-        return side;
-    }
-
-    public Num getEntryCandleLow() {
-        return entryCandleLow;
-    }
-
-    public Num getEntryCandleHigh() {
-        return entryCandleHigh;
-    }
-
-    public long getEntryTimestamp() {
-        return entryTimestamp;
-    }
-
-    // Setters could be added if needed for updates, but typically positions are replaced or removed.
-    public void setSymbol(String symbol) {
-        this.symbol = symbol;
-    }
-
-    public void setEntryPrice(Num entryPrice) {
-        this.entryPrice = entryPrice;
-    }
-
-    public void setQuantity(Num quantity) {
-        this.quantity = quantity;
-    }
-
-    public void setSide(PositionSide side) {
-        this.side = side;
-    }
-
-    public void setEntryCandleLow(Num entryCandleLow) {
-        this.entryCandleLow = entryCandleLow;
-    }
-
-    public void setEntryCandleHigh(Num entryCandleHigh) {
-        this.entryCandleHigh = entryCandleHigh;
-    }
-
-    public void setEntryTimestamp(long entryTimestamp) {
-        this.entryTimestamp = entryTimestamp;
-    }
-
-    @Override
-    public String toString() {
-        return "ActivePositionDto{" +
-                "symbol='" + symbol + '\'' +
-                ", entryPrice=" + entryPrice +
-                ", quantity=" + quantity +
-                ", side=" + side +
-                ", entryCandleLow=" + entryCandleLow +
-                ", entryCandleHigh=" + entryCandleHigh +
-                ", entryTimestamp=" + entryTimestamp +
-                '}';
-    }
+    // Lombok's @AllArgsConstructor will generate one for all fields including entryTimestamp.
+    // If we want the System.currentTimeMillis() logic, this manual constructor is better.
+    // To use Lombok and this logic, we'd need a @NoArgsConstructor and then manual setting, or a builder with a default value for timestamp.
+    // For now, I'll keep this manual constructor for the specific timestamp logic and remove other boilerplate.
+    // Lombok will add other constructors if needed (@NoArgsConstructor, and potentially an @AllArgsConstructor for all fields if this one is removed or has different signature).
+    // To keep things simple and let Lombok do most work, I'll remove this manual constructor and assume timestamp is passed or set.
+    // If System.currentTimeMillis() is always desired on creation, it's often better to set it in the service layer creating the DTO.
+    // For now, let's assume entryTimestamp is a field to be filled by the creator, so @AllArgsConstructor is fine.
 }

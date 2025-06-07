@@ -1,8 +1,14 @@
 package com.jbqneto.dev.botdev.dto;
 
 import com.jbqneto.dev.botdev.strategy.TradeSignal;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.ta4j.core.num.Num;
 
+@Data
+@NoArgsConstructor
+// @AllArgsConstructor // We have custom constructor logic for timestamp
 public class TradingDecision {
     private TradeSignal signal;
     private String symbol;
@@ -15,67 +21,32 @@ public class TradingDecision {
         this.symbol = symbol;
         this.price = price;
         this.reason = reason;
-        this.timestamp = System.currentTimeMillis();
+        this.timestamp = System.currentTimeMillis(); // Custom timestamp logic
     }
 
     public TradingDecision(TradeSignal signal, String symbol) {
         this(signal, symbol, null, null);
+        // Timestamp will be set by the above constructor call
     }
 
     public TradingDecision(TradeSignal signal) {
         this(signal, null, null, null);
+        // Timestamp will be set by the above constructor call
     }
 
-
-    // Getters and Setters
-    public TradeSignal getSignal() {
-        return signal;
-    }
-
-    public void setSignal(TradeSignal signal) {
-        this.signal = signal;
-    }
-
-    public String getSymbol() {
-        return symbol;
-    }
-
-    public void setSymbol(String symbol) {
-        this.symbol = symbol;
-    }
-
-    public Num getPrice() {
-        return price;
-    }
-
-    public void setPrice(Num price) {
-        this.price = price;
-    }
-
-    public String getReason() {
-        return reason;
-    }
-
-    public void setReason(String reason) {
-        this.reason = reason;
-    }
-
-    public long getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    @Override
-    public String toString() {
-        return "TradingDecision{" +
-                "signal=" + signal +
-                ", symbol='" + symbol + '\'' +
-                ", price=" + (price != null ? price.doubleValue() : "N/A") +
-                ", reason='" + reason + '\'' +
-                ", timestamp=" + timestamp +
-                '}';
-    }
+    // Lombok's @Data will generate:
+    // - getters for all fields
+    // - setters for all fields
+    // - equals()
+    // - hashCode()
+    // - toString()
+    // - a constructor for all final fields (if any)
+    // Since we have custom constructor logic for the timestamp,
+    // we might not want Lombok's @AllArgsConstructor if it conflicts or is unused.
+    // If we want an all-args constructor that *includes* timestamp for manual setting,
+    // then we can add @AllArgsConstructor and remove the custom ones, or ensure signatures differ.
+    // For now, keeping the custom constructors that auto-set timestamp.
+    // If an @AllArgsConstructor is added by Lombok due to @Data and no other constructor,
+    // it might not set the timestamp automatically.
+    // The current custom constructors are fine. @Data will not generate an AllArgsConstructor if other constructors are present.
 }

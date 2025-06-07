@@ -2,6 +2,7 @@ package com.jbqneto.dev.botdev.service;
 
 import com.jbqneto.dev.botdev.dto.BollingerBandsValues;
 import com.jbqneto.dev.botdev.dto.Candlestick;
+import lombok.extern.slf4j.Slf4j; // Added
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,9 +27,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j // Added
 public class TechnicalIndicatorServiceImpl implements TechnicalIndicatorService {
 
-    private static final Logger logger = LoggerFactory.getLogger(TechnicalIndicatorServiceImpl.class);
+    // private static final Logger logger = LoggerFactory.getLogger(TechnicalIndicatorServiceImpl.class); // Removed
 
     private BarSeries convertToBarSeries(List<Candlestick> candlesticks, String seriesName) {
         if (candlesticks == null || candlesticks.isEmpty()) {
@@ -61,7 +63,7 @@ public class TechnicalIndicatorServiceImpl implements TechnicalIndicatorService 
                                 .volume(candle.getVolume())
                                 .build();
                     } catch (Exception e) {
-                        logger.error("Error converting candlestick to bar: {}. Candlestick: {}", e.getMessage(), candle, e);
+                        log.error("Error converting candlestick to bar: {}. Candlestick: {}", e.getMessage(), candle, e); // logger to log
                         return null;
                     }
                 })
@@ -77,7 +79,7 @@ public class TechnicalIndicatorServiceImpl implements TechnicalIndicatorService 
     @Override
     public Num calculateVWAP(List<Candlestick> candlesticks, int period) {
         if (candlesticks == null || candlesticks.size() < period) {
-            logger.warn("Not enough candlesticks to calculate VWAP for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size());
+            log.warn("Not enough candlesticks to calculate VWAP for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size()); // logger to log
             return null;
         }
         BarSeries series = convertToBarSeries(candlesticks, "VWAP_Series");
@@ -89,7 +91,7 @@ public class TechnicalIndicatorServiceImpl implements TechnicalIndicatorService 
     @Override
     public Num calculateRSI(List<Candlestick> candlesticks, int period) {
         if (candlesticks == null || candlesticks.size() < period) {
-            logger.warn("Not enough candlesticks to calculate RSI for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size());
+            log.warn("Not enough candlesticks to calculate RSI for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size()); // logger to log
             return null;
         }
         BarSeries series = convertToBarSeries(candlesticks, "RSI_Series");
@@ -102,7 +104,7 @@ public class TechnicalIndicatorServiceImpl implements TechnicalIndicatorService 
     @Override
     public Num calculateEMA(List<Candlestick> candlesticks, int period) {
         if (candlesticks == null || candlesticks.size() < period) {
-            logger.warn("Not enough candlesticks to calculate EMA for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size());
+            log.warn("Not enough candlesticks to calculate EMA for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size()); // logger to log
             return null;
         }
         BarSeries series = convertToBarSeries(candlesticks, "EMA_Series");
@@ -115,7 +117,7 @@ public class TechnicalIndicatorServiceImpl implements TechnicalIndicatorService 
     @Override
     public BollingerBandsValues calculateBollingerBands(List<Candlestick> candlesticks, int period, double stdDevMultiplier) {
         if (candlesticks == null || candlesticks.size() < period) {
-             logger.warn("Not enough candlesticks to calculate Bollinger Bands for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size());
+             log.warn("Not enough candlesticks to calculate Bollinger Bands for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size()); // logger to log
             return null;
         }
         BarSeries series = convertToBarSeries(candlesticks, "BB_Series");
@@ -138,7 +140,7 @@ public class TechnicalIndicatorServiceImpl implements TechnicalIndicatorService 
     @Override
     public Num calculateAverageVolume(List<Candlestick> candlesticks, int period) {
         if (candlesticks == null || candlesticks.size() < period) {
-            logger.warn("Not enough candlesticks to calculate Average Volume for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size());
+            log.warn("Not enough candlesticks to calculate Average Volume for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size()); // logger to log
             return null;
         }
         BarSeries series = convertToBarSeries(candlesticks, "AvgVol_Series");

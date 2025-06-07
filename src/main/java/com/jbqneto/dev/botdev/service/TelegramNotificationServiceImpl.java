@@ -1,6 +1,7 @@
 package com.jbqneto.dev.botdev.service;
 
 import com.jbqneto.dev.botdev.config.TelegramConfig;
+import lombok.extern.slf4j.Slf4j; // Added
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,11 +12,12 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Service
+@Slf4j // Added
 public class TelegramNotificationServiceImpl implements NotificationService {
 
-    private static final Logger logger = LoggerFactory.getLogger(TelegramNotificationServiceImpl.class);
+    // private static final Logger logger = LoggerFactory.getLogger(TelegramNotificationServiceImpl.class); // Removed
 
-    private final TelegramConfig telegramConfig; // Changed from TradingConfig
+    private final TelegramConfig telegramConfig;
     private DefaultAbsSender telegramSender;
 
     @Autowired
@@ -25,7 +27,7 @@ public class TelegramNotificationServiceImpl implements NotificationService {
         String botToken = telegramConfig.getBotToken();
 
         if (botToken == null || botToken.isEmpty() || "YOUR_TELEGRAM_BOT_TOKEN".equals(botToken)) {
-            logger.warn("Telegram Bot Token is not configured or is a placeholder. Telegram notifications will be disabled.");
+            log.warn("Telegram Bot Token is not configured or is a placeholder. Telegram notifications will be disabled."); // logger to log
             this.telegramSender = null;
         } else {
             DefaultBotOptions botOptions = new DefaultBotOptions();
@@ -33,23 +35,23 @@ public class TelegramNotificationServiceImpl implements NotificationService {
             this.telegramSender = new DefaultAbsSender(botOptions) {
                 @Override
                 public String getBotToken() {
-                    return botToken; // This correctly uses the botToken from the outer class's scope
+                    return botToken;
                 }
             };
-            logger.info("TelegramNotificationService initialized with Bot Token.");
+            log.info("TelegramNotificationService initialized with Bot Token."); // logger to log
         }
     }
 
     @Override
     public boolean sendMessage(String messageText) {
         if (telegramSender == null) {
-            logger.warn("Telegram sender not initialized (token missing or placeholder). Cannot send message: {}", messageText);
+            log.warn("Telegram sender not initialized (token missing or placeholder). Cannot send message: {}", messageText); // logger to log
             return false;
         }
 
         String chatId = telegramConfig.getChatId();
         if (chatId == null || chatId.isEmpty() || "YOUR_TELEGRAM_CHAT_ID".equals(chatId)) {
-            logger.error("Telegram Chat ID is not configured or is a placeholder. Cannot send message.");
+            log.error("Telegram Chat ID is not configured or is a placeholder. Cannot send message."); // logger to log
             return false;
         }
 
@@ -60,12 +62,12 @@ public class TelegramNotificationServiceImpl implements NotificationService {
         // message.setParseMode(ParseMode.MARKDOWN);
 
         try {
-            logger.debug("Attempting to send Telegram message to chatId {}: {}", chatId, messageText);
+            log.debug("Attempting to send Telegram message to chatId {}: {}", chatId, messageText); // logger to log
             telegramSender.execute(message);
-            logger.info("Telegram message sent successfully to chatId {}.", chatId);
+            log.info("Telegram message sent successfully to chatId {}.", chatId); // logger to log
             return true;
         } catch (TelegramApiException e) {
-            logger.error("Failed to send Telegram message to chatId {}: {}", chatId, e.getMessage(), e);
+            log.error("Failed to send Telegram message to chatId {}: {}", chatId, e.getMessage(), e); // logger to log
             return false;
         }
     }

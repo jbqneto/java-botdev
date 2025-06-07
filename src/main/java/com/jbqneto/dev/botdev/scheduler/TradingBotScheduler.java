@@ -12,6 +12,7 @@ import com.jbqneto.dev.botdev.service.OrderService;
 import com.jbqneto.dev.botdev.service.TechnicalIndicatorService;
 import com.jbqneto.dev.botdev.strategy.TradeSignal;
 import com.jbqneto.dev.botdev.strategy.TradingStrategy;
+import lombok.extern.slf4j.Slf4j; // Added
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,9 +31,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @EnableScheduling
+@Slf4j // Added
 public class TradingBotScheduler {
 
-    private static final Logger logger = LoggerFactory.getLogger(TradingBotScheduler.class);
+    // private static final Logger logger = LoggerFactory.getLogger(TradingBotScheduler.class); // Removed
 
     private final StrategyConfig strategyConfig;
     private final ExchangeDataService exchangeDataService; // Changed
@@ -68,9 +70,9 @@ public class TradingBotScheduler {
     // Example: Run every 15 minutes at the start of the minute.
     // Adjust cron as needed, e.g., "0 0/15 * * * ?" for 0, 15, 30, 45 minutes past the hour.
     // Or "1 0/15 * * * ?" to run at 1 minute past 0, 15, 30, 45 to ensure candle data is typically complete.
-    @Scheduled(cron = "${strategy.scheduler.cron:0 0/15 * * * ?}") // Updated to use strategy.scheduler.cron
+    @Scheduled(cron = "${strategy.scheduler.cron:0 0/15 * * * ?}")
     public void runTradingLoop() {
-        logger.info("Starting trading loop...");
+        log.info("Starting trading loop..."); // logger to log
 
         // Trading Hours Check
         try {
@@ -84,18 +86,18 @@ public class TradingBotScheduler {
             if (startTime.isAfter(endTime)) { // Overnight case
                 if (!(currentTime.isAfter(startTime) || currentTime.equals(startTime) ||
                       currentTime.isBefore(endTime))) {
-                    logger.info("Outside trading hours (overnight period). Current UTC time: {}. Trading hours: {}-{}", currentTime, startTimeStr, endTimeStr);
+                    log.info("Outside trading hours (overnight period). Current UTC time: {}. Trading hours: {}-{}", currentTime, startTimeStr, endTimeStr); // logger to log
                     return;
                 }
             } else { // Same day case
                  if (currentTime.isBefore(startTime) || currentTime.isAfter(endTime)) {
-                    logger.info("Outside trading hours. Current UTC time: {}. Trading hours: {}-{}", currentTime, startTimeStr, endTimeStr);
+                    log.info("Outside trading hours. Current UTC time: {}. Trading hours: {}-{}", currentTime, startTimeStr, endTimeStr); // logger to log
                     return;
                 }
             }
-            logger.info("Within trading hours. Proceeding with strategy.");
+            log.info("Within trading hours. Proceeding with strategy."); // logger to log
         } catch (Exception e) {
-            logger.error("Error parsing trading hours from config. Start: '{}', End: '{}'. Proceeding as if within hours.",
+            log.error("Error parsing trading hours from config. Start: '{}', End: '{}'. Proceeding as if within hours.", // logger to log
                 strategyConfig.getTradingHours().getStart(), strategyConfig.getTradingHours().getEnd(), e);
             // Fallback: proceed if parsing fails, or handle more strictly.
         }
@@ -103,18 +105,18 @@ public class TradingBotScheduler {
 
         List<String> symbols = strategyConfig.getSymbols();
         if (symbols == null || symbols.isEmpty()) {
-            logger.warn("No trading symbols configured. Skipping trading loop.");
+            log.warn("No trading symbols configured. Skipping trading loop."); // logger to log
             return;
         }
 
         for (String symbol : symbols) {
             try {
-                logger.info("Processing symbol: {}", symbol);
-                ActivePositionDto currentPosition = positionService.getPosition(symbol).orElse(null); // Changed
+                log.info("Processing symbol: {}", symbol); // logger to log
+                ActivePositionDto currentPosition = positionService.getPosition(symbol).orElse(null);
                 List<Candlestick> candles = exchangeDataService.getCandlestickBars(symbol, strategyConfig.getDefaultTimeframe(), 200);
 
                 if (candles == null || candles.isEmpty()) {
-                    logger.warn("No candlestick data received for {}. Skipping.", symbol);
+                    log.warn("No candlestick data received for {}. Skipping.", symbol); // logger to log
                     continue;
                 }
                 Candlestick latestCandle = candles.get(candles.size() - 1);
@@ -122,22 +124,22 @@ public class TradingBotScheduler {
 
                 if (currentPosition != null) {
                     // --- Check for Exit Conditions ---
-                    logger.info("Active position found for {}: {}", symbol, currentPosition);
+                    log.info("Active position found for {}: {}", symbol, currentPosition); // logger to log
                     boolean exited = handleExitConditions(currentPosition, candles, latestCandle);
                     if (exited) {
                         continue; // Move to next symbol if position was closed
                     }
                 } else {
                     // --- If No Active Position, Check for Entries ---
-                    logger.info("No active position for {}. Checking for entry signals.", symbol);
+                    log.info("No active position for {}. Checking for entry signals.", symbol); // logger to log
                     TradingDecision decision = tradingStrategy.generateSignal(symbol, strategyConfig.getDefaultTimeframe());
 
                     if (decision.getSignal() == TradeSignal.LONG_ENTRY || decision.getSignal() == TradeSignal.SHORT_ENTRY) {
-                        logger.info("Entry signal {} for {} at approx price {}. Reason: {}", decision.getSignal(), symbol, currentPrice, decision.getReason());
+                        log.info("Entry signal {} for {} at approx price {}. Reason: {}", decision.getSignal(), symbol, currentPrice, decision.getReason()); // logger to log
 
                         Num quantityToTrade = calculateQuantity(symbol, currentPrice, strategyConfig.getFixedUsdAmountPerTrade());
                         if (quantityToTrade == null || quantityToTrade.isLessThanOrEqual(DecimalNum.ZERO)) {
-                            logger.warn("Could not calculate valid quantity for {}. Skipping trade.", symbol);
+                            log.warn("Could not calculate valid quantity for {}. Skipping trade.", symbol); // logger to log
                             continue;
                         }
 
@@ -163,23 +165,23 @@ public class TradingBotScheduler {
                             tradeLoggerService.logTrade(decision, orderResponse, notes);
                             notificationService.sendMessage(String.format("Trade Alert: %s %s @ %s. %s. Order ID: %s",
                                     decision.getSignal(), symbol, executedPrice.toString(), notes, orderResponse.getOrderId()));
-                            logger.info("Successfully opened position: {}", newPosition);
+                            log.info("Successfully opened position: {}", newPosition); // logger to log
                         } else {
                             String failureReason = orderResponse != null ? orderResponse.getStatus() + " - " + orderResponse.getReason() : "Order placement failed, null response.";
-                            logger.error("Failed to place entry order for {}. Reason: {}", symbol, failureReason);
+                            log.error("Failed to place entry order for {}. Reason: {}", symbol, failureReason); // logger to log
                             notificationService.sendMessage(String.format("Order Error: Failed to %s %s. Reason: %s", orderSide, symbol, failureReason));
                             tradeLoggerService.logTrade(decision, orderResponse, "Entry order placement failed: " + failureReason);
                         }
                     } else {
-                        logger.info("Signal for {} is {}. No action taken.", symbol, decision.getSignal());
+                        log.info("Signal for {} is {}. No action taken.", symbol, decision.getSignal()); // logger to log
                     }
                 }
             } catch (Exception e) {
-                logger.error("Error processing symbol {}: {}", symbol, e.getMessage(), e);
+                log.error("Error processing symbol {}: {}", symbol, e.getMessage(), e); // logger to log
                 notificationService.sendMessage(String.format("Bot Error: Exception processing symbol %s: %s", symbol, e.getMessage()));
             }
         }
-        logger.info("Trading loop finished.");
+        log.info("Trading loop finished."); // logger to log
     }
 
     private boolean handleExitConditions(ActivePositionDto position, List<Candlestick> candles, Candlestick latestCandle) {
@@ -244,7 +246,7 @@ public class TradingBotScheduler {
         }
 
         if (exitSignal != null) {
-            logger.info("Exit signal {} for {}. Reason: {}", exitSignal, position.getSymbol(), exitReason);
+            log.info("Exit signal {} for {}. Reason: {}", exitSignal, position.getSymbol(), exitReason); // logger to log
             String orderSide = (position.getSide() == ActivePositionDto.PositionSide.LONG) ? "SELL" : "BUY";
 
             NewOrderResponseDto orderResponse = orderService.placeNewOrder(
@@ -261,11 +263,11 @@ public class TradingBotScheduler {
                 tradeLoggerService.logTrade(decision, orderResponse, exitReason);
                 notificationService.sendMessage(String.format("Trade Alert: %s %s @ %s. %s. Order ID: %s",
                         exitSignal, position.getSymbol(), currentPrice.toString(), exitReason, orderResponse.getOrderId()));
-                logger.info("Successfully closed position for {}: {}", position.getSymbol(), exitReason);
+                log.info("Successfully closed position for {}: {}", position.getSymbol(), exitReason); // logger to log
                 return true;
             } else {
                 String failureReason = orderResponse != null ? orderResponse.getStatus() + " - " + orderResponse.getReason() : "Order placement failed, null response.";
-                logger.error("Failed to place exit order for {}. Reason: {}", position.getSymbol(), failureReason);
+                log.error("Failed to place exit order for {}. Reason: {}", position.getSymbol(), failureReason); // logger to log
                 notificationService.sendMessage(String.format("Order Error: Failed to %s %s to close position. Reason: %s", orderSide, position.getSymbol(), failureReason));
                 tradeLoggerService.logTrade(decision, orderResponse, "Exit order placement failed: " + failureReason);
                 return false; // Exit order failed, keep position active for now
@@ -276,7 +278,7 @@ public class TradingBotScheduler {
 
     private Num calculateQuantity(String symbol, Num currentPrice, double fixedUsdAmount) {
         if (currentPrice == null || currentPrice.isZero() || currentPrice.isNegative()) {
-            logger.warn("Cannot calculate quantity for symbol {} due to invalid current price: {}", symbol, currentPrice);
+            log.warn("Cannot calculate quantity for symbol {} due to invalid current price: {}", symbol, currentPrice); // logger to log
             return DecimalNum.ZERO;
         }
         // Example: Invest a fixed USD amount per trade

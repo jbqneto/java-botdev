@@ -2,6 +2,7 @@ package com.jbqneto.dev.botdev.logger;
 
 import com.jbqneto.dev.botdev.dto.NewOrderResponseDto;
 import com.jbqneto.dev.botdev.dto.TradingDecision;
+import lombok.extern.slf4j.Slf4j; // Added
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,10 @@ import java.util.Collections;
 import java.util.StringJoiner;
 
 @Service
+@Slf4j // Added
 public class FileTradeLoggerService implements TradeLoggerService {
 
-    private static final Logger logger = LoggerFactory.getLogger(FileTradeLoggerService.class);
+    // private static final Logger logger = LoggerFactory.getLogger(FileTradeLoggerService.class); // Removed
     private static final String LOG_FILE_NAME = "tradelog.csv";
     private final Path logFilePath;
     private static final DateTimeFormatter CSV_TIMESTAMP_FORMATTER =
@@ -50,7 +52,7 @@ public class FileTradeLoggerService implements TradeLoggerService {
                 Files.write(logFilePath, header.getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
             }
         } catch (IOException e) {
-            logger.error("Failed to write CSV header to trade log file: {}", logFilePath, e);
+            log.error("Failed to write CSV header to trade log file: {}", logFilePath, e); // logger to log
         }
     }
 
@@ -77,7 +79,7 @@ public class FileTradeLoggerService implements TradeLoggerService {
         try {
             Files.write(logFilePath, logLine.getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
         } catch (IOException e) {
-            logger.error("Failed to write to trade log file: {}", logFilePath, e);
+            log.error("Failed to write to trade log file: {}", logFilePath, e); // logger to log
             // Optionally, re-throw or handle more gracefully
         }
     }

@@ -4,8 +4,9 @@ import com.jbqneto.dev.botdev.config.StrategyConfig;
 import com.jbqneto.dev.botdev.dto.BollingerBandsValues;
 import com.jbqneto.dev.botdev.dto.Candlestick;
 import com.jbqneto.dev.botdev.dto.TradingDecision;
-import com.jbqneto.dev.botdev.service.ExchangeDataService; // Changed
+import com.jbqneto.dev.botdev.service.ExchangeDataService;
 import com.jbqneto.dev.botdev.service.TechnicalIndicatorService;
+import lombok.extern.slf4j.Slf4j; // Added
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,11 +17,12 @@ import org.ta4j.core.num.DecimalNum; // Using DecimalNum for comparisons
 import java.util.List;
 
 @Service
+@Slf4j // Added
 public class DayTradingStrategyImpl implements TradingStrategy {
 
-    private static final Logger logger = LoggerFactory.getLogger(DayTradingStrategyImpl.class);
+    // private static final Logger logger = LoggerFactory.getLogger(DayTradingStrategyImpl.class); // Removed
 
-    private final ExchangeDataService exchangeDataService; // Changed
+    private final ExchangeDataService exchangeDataService;
     private final TechnicalIndicatorService technicalIndicatorService;
     private final StrategyConfig strategyConfig;
 
@@ -40,12 +42,12 @@ public class DayTradingStrategyImpl implements TradingStrategy {
         String primaryTimeframe = strategyConfig.getDefaultTimeframe();
         int candleFetchLimit = 200; // Enough for common indicators like EMA200 or BollingerBands(20) + lead-in data
 
-        logger.info("Generating signal for {} on primary timeframe {}", symbol, primaryTimeframe);
+        log.info("Generating signal for {} on primary timeframe {}", symbol, primaryTimeframe); // logger to log
 
         // 1. Fetch Data
-        List<Candlestick> candlesticks = exchangeDataService.getCandlestickBars(symbol, primaryTimeframe, candleFetchLimit); // Changed
+        List<Candlestick> candlesticks = exchangeDataService.getCandlestickBars(symbol, primaryTimeframe, candleFetchLimit);
         if (candlesticks == null || candlesticks.size() < strategyConfig.getEmaLongPeriod()) { // Ensure enough for longest EMA
-            logger.warn("Not enough candlestick data for symbol {} on timeframe {}. Found {} candles, need at least {}.",
+            log.warn("Not enough candlestick data for symbol {} on timeframe {}. Found {} candles, need at least {}.", // logger to log
                     symbol, primaryTimeframe, candlesticks == null ? 0 : candlesticks.size(), strategyConfig.getEmaLongPeriod());
             return new TradingDecision(TradeSignal.HOLD, symbol, null, "Insufficient data");
         }
@@ -63,7 +65,7 @@ public class DayTradingStrategyImpl implements TradingStrategy {
         Num avgVolume = technicalIndicatorService.calculateAverageVolume(candlesticks, strategyConfig.getVolumeAvgPeriod());
 
         if (vwap == null || rsi == null || emaShort == null || emaLong == null || bb == null || avgVolume == null) {
-            logger.warn("One or more core indicators could not be calculated for {} on {}.", symbol, primaryTimeframe);
+            log.warn("One or more core indicators could not be calculated for {} on {}.", symbol, primaryTimeframe); // logger to log
             return new TradingDecision(TradeSignal.HOLD, symbol, null, "Indicator calculation error");
         }
 
@@ -118,14 +120,14 @@ public class DayTradingStrategyImpl implements TradingStrategy {
         // This service is stateless for now. A real system would have a PositionManagementService.
         // For example, if a long position is active:
         // Num entryPrice = ...; // Would come from active position data
-        // if (currentClose.isGreaterThanOrEqual(entryPrice.multipliedBy(DecimalNum.valueOf(1 + tradingConfig.getTrading().getLongExitTarget1Percent()/100.0)))) {
+        // if (currentClose.isGreaterThanOrEqual(entryPrice.multipliedBy(DecimalNum.valueOf(1 + strategyConfig.getLongExitTarget1Percent()/100.0)))) {
         //    return new TradingDecision(TradeSignal.LONG_EXIT, symbol, currentClose, "Target 1 profit hit.");
         // }
-        // if (currentClose.isLessThanOrEqual(entryPrice.multipliedBy(DecimalNum.valueOf(1 - tradingConfig.getTrading().getLongStopLossPercent()/100.0)))) {
+        // if (currentClose.isLessThanOrEqual(entryPrice.multipliedBy(DecimalNum.valueOf(1 - strategyConfig.getLongStopLossPercent()/100.0)))) {
         //    return new TradingDecision(TradeSignal.LONG_EXIT, symbol, currentClose, "Stop loss hit.");
         // }
 
-        logger.info("No clear signal for {}. Conditions: VWAP={}, RSI={}, EMA9={}, EMA21={}, Vol={}, AvgVol={}",
+        log.info("No clear signal for {}. Conditions: VWAP={}, RSI={}, EMA9={}, EMA21={}, Vol={}, AvgVol={}", // logger to log
                 symbol, vwap != null ? vwap.doubleValue() : "N/A",
                 rsi != null ? rsi.doubleValue() : "N/A",
                 emaShort != null ? emaShort.doubleValue() : "N/A",
@@ -184,7 +186,7 @@ public class DayTradingStrategyImpl implements TradingStrategy {
         // Optional: 5-minute candle closes above VWAP (Not implemented)
 
         if (priceCrossedAboveVwap && rsiConditionMet && emaCrossoverMet && volumeConditionMet) {
-            logger.info("LONG_ENTRY signal for {}: {}", symbol, longReasonBuilder.toString().trim());
+            log.info("LONG_ENTRY signal for {}: {}", symbol, longReasonBuilder.toString().trim()); // logger to log
             return new TradingDecision(TradeSignal.LONG_ENTRY, symbol, currentClose, longReasonBuilder.toString().trim());
         }
         return new TradingDecision(TradeSignal.HOLD, symbol); // Default to HOLD if conditions not met
@@ -238,7 +240,7 @@ public class DayTradingStrategyImpl implements TradingStrategy {
         }
 
         if (priceCrossedBelowVwap && rsiShortConditionMet && emaCrossdownMet && volumeBearishConditionMet) {
-            logger.info("SHORT_ENTRY signal for {}: {}", symbol, shortReasonBuilder.toString().trim());
+            log.info("SHORT_ENTRY signal for {}: {}", symbol, shortReasonBuilder.toString().trim()); // logger to log
             return new TradingDecision(TradeSignal.SHORT_ENTRY, symbol, currentClose, shortReasonBuilder.toString().trim());
         }
         return new TradingDecision(TradeSignal.HOLD, symbol); // Default to HOLD
