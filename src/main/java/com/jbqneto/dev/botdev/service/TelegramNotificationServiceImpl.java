@@ -12,10 +12,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Service
-@Slf4j // Added
+@Slf4j
 public class TelegramNotificationServiceImpl implements NotificationService {
-
-    // private static final Logger logger = LoggerFactory.getLogger(TelegramNotificationServiceImpl.class); // Removed
 
     private final TelegramConfig telegramConfig;
     private DefaultAbsSender telegramSender;

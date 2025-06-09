@@ -12,10 +12,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-@Slf4j // Added
+@Slf4j
 public class PositionServiceImpl implements PositionService {
 
-    // private static final Logger logger = LoggerFactory.getLogger(PositionServiceImpl.class); // Removed
     private final Map<String, ActivePositionDto> activePositions = new ConcurrentHashMap<>();
 
     @Override

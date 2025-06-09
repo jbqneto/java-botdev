@@ -34,19 +34,7 @@ public class TradingDecision {
         // Timestamp will be set by the above constructor call
     }
 
-    // Lombok's @Data will generate:
-    // - getters for all fields
-    // - setters for all fields
-    // - equals()
-    // - hashCode()
-    // - toString()
-    // - a constructor for all final fields (if any)
-    // Since we have custom constructor logic for the timestamp,
-    // we might not want Lombok's @AllArgsConstructor if it conflicts or is unused.
-    // If we want an all-args constructor that *includes* timestamp for manual setting,
-    // then we can add @AllArgsConstructor and remove the custom ones, or ensure signatures differ.
-    // For now, keeping the custom constructors that auto-set timestamp.
-    // If an @AllArgsConstructor is added by Lombok due to @Data and no other constructor,
-    // it might not set the timestamp automatically.
-    // The current custom constructors are fine. @Data will not generate an AllArgsConstructor if other constructors are present.
+    // Note: Custom constructors are kept to auto-initialize 'timestamp'.
+    // Lombok's @Data will provide getters, setters, equals, hashCode, toString.
+    // It will not generate an @AllArgsConstructor because other constructors exist.
 }

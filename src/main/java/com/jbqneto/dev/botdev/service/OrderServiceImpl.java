@@ -15,10 +15,8 @@ import org.springframework.stereotype.Service;
 import java.util.LinkedHashMap;
 
 @Service
-@Slf4j // Added
+@Slf4j
 public class OrderServiceImpl implements OrderService {
-
-    // private static final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class); // Removed
 
     private final SpotClient spotClient;
     private final BinanceConfig binanceConfig; // Changed from TradingConfig

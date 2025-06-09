@@ -21,10 +21,9 @@ import java.util.Collections;
 import java.util.StringJoiner;
 
 @Service
-@Slf4j // Added
+@Slf4j
 public class FileTradeLoggerService implements TradeLoggerService {
 
-    // private static final Logger logger = LoggerFactory.getLogger(FileTradeLoggerService.class); // Removed
     private static final String LOG_FILE_NAME = "tradelog.csv";
     private final Path logFilePath;
     private static final DateTimeFormatter CSV_TIMESTAMP_FORMATTER =

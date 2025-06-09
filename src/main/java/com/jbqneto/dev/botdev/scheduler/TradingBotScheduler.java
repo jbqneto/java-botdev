@@ -31,10 +31,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @EnableScheduling
-@Slf4j // Added
+@Slf4j
 public class TradingBotScheduler {
-
-    // private static final Logger logger = LoggerFactory.getLogger(TradingBotScheduler.class); // Removed
 
     private final StrategyConfig strategyConfig;
     private final ExchangeDataService exchangeDataService; // Changed
@@ -116,75 +114,76 @@ public class TradingBotScheduler {
                 List<Candlestick> candles = exchangeDataService.getCandlestickBars(symbol, strategyConfig.getDefaultTimeframe(), 200);
 
                 if (candles == null || candles.isEmpty()) {
-                    log.warn("No candlestick data received for {}. Skipping.", symbol); // logger to log
+                    log.warn("No candlestick data received for {}. Skipping.", symbol);
                     continue;
                 }
                 Candlestick latestCandle = candles.get(candles.size() - 1);
                 Num currentPrice = DecimalNum.valueOf(latestCandle.getClosePrice());
 
                 if (currentPosition != null) {
-                    // --- Check for Exit Conditions ---
-                    log.info("Active position found for {}: {}", symbol, currentPosition); // logger to log
-                    boolean exited = handleExitConditions(currentPosition, candles, latestCandle);
+                    boolean exited = processExitStrategyAndExecuteOrder(currentPosition, candles, latestCandle); // Renamed
                     if (exited) {
-                        continue; // Move to next symbol if position was closed
+                        continue;
                     }
                 } else {
-                    // --- If No Active Position, Check for Entries ---
-                    log.info("No active position for {}. Checking for entry signals.", symbol); // logger to log
-                    TradingDecision decision = tradingStrategy.generateSignal(symbol, strategyConfig.getDefaultTimeframe());
-
-                    if (decision.getSignal() == TradeSignal.LONG_ENTRY || decision.getSignal() == TradeSignal.SHORT_ENTRY) {
-                        log.info("Entry signal {} for {} at approx price {}. Reason: {}", decision.getSignal(), symbol, currentPrice, decision.getReason()); // logger to log
-
-                        Num quantityToTrade = calculateQuantity(symbol, currentPrice, strategyConfig.getFixedUsdAmountPerTrade());
-                        if (quantityToTrade == null || quantityToTrade.isLessThanOrEqual(DecimalNum.ZERO)) {
-                            log.warn("Could not calculate valid quantity for {}. Skipping trade.", symbol); // logger to log
-                            continue;
-                        }
-
-                        String orderSide = (decision.getSignal() == TradeSignal.LONG_ENTRY) ? "BUY" : "SELL";
-                        NewOrderResponseDto orderResponse = orderService.placeNewOrder(symbol, orderSide, "MARKET", null, quantityToTrade.doubleValue(), null);
-
-                        if (orderResponse != null && ("FILLED".equalsIgnoreCase(orderResponse.getStatus()) || "NEW".equalsIgnoreCase(orderResponse.getStatus()) || orderResponse.getStatus().contains("SIMULATED"))) { // "NEW" for limit orders if used later
-                            Num executedPrice = (orderResponse.getCummulativeQuoteQty() != null && DecimalNum.valueOf(orderResponse.getExecutedQty()).isPositive()) ?
-                                DecimalNum.valueOf(orderResponse.getCummulativeQuoteQty()).dividedBy(DecimalNum.valueOf(orderResponse.getExecutedQty())) :
-                                currentPrice; // Fallback to current price if not available from response
-
-                            ActivePositionDto.PositionSide side = (orderSide.equals("BUY")) ? ActivePositionDto.PositionSide.LONG : ActivePositionDto.PositionSide.SHORT;
-                            ActivePositionDto newPosition = new ActivePositionDto(
-                                    symbol,
-                                    executedPrice,
-                                    DecimalNum.valueOf(orderResponse.getExecutedQty()),
-                                    side,
-                                    DecimalNum.valueOf(latestCandle.getLowPrice()),  // Low of entry candle
-                                    DecimalNum.valueOf(latestCandle.getHighPrice()) // High of entry candle
-                            );
-                            positionService.updatePosition(newPosition); // Changed
-                            String notes = "Entry order placed. " + decision.getReason();
-                            tradeLoggerService.logTrade(decision, orderResponse, notes);
-                            notificationService.sendMessage(String.format("Trade Alert: %s %s @ %s. %s. Order ID: %s",
-                                    decision.getSignal(), symbol, executedPrice.toString(), notes, orderResponse.getOrderId()));
-                            log.info("Successfully opened position: {}", newPosition); // logger to log
-                        } else {
-                            String failureReason = orderResponse != null ? orderResponse.getStatus() + " - " + orderResponse.getReason() : "Order placement failed, null response.";
-                            log.error("Failed to place entry order for {}. Reason: {}", symbol, failureReason); // logger to log
-                            notificationService.sendMessage(String.format("Order Error: Failed to %s %s. Reason: %s", orderSide, symbol, failureReason));
-                            tradeLoggerService.logTrade(decision, orderResponse, "Entry order placement failed: " + failureReason);
-                        }
-                    } else {
-                        log.info("Signal for {} is {}. No action taken.", symbol, decision.getSignal()); // logger to log
-                    }
+                    handlePotentialEntry(symbol, latestCandle, currentPrice); // Extracted
                 }
             } catch (Exception e) {
-                log.error("Error processing symbol {}: {}", symbol, e.getMessage(), e); // logger to log
+                log.error("Error processing symbol {}: {}", symbol, e.getMessage(), e);
                 notificationService.sendMessage(String.format("Bot Error: Exception processing symbol %s: %s", symbol, e.getMessage()));
             }
         }
-        log.info("Trading loop finished."); // logger to log
+        log.info("Trading loop finished.");
     }
 
-    private boolean handleExitConditions(ActivePositionDto position, List<Candlestick> candles, Candlestick latestCandle) {
+    private void handlePotentialEntry(String symbol, Candlestick latestCandle, Num currentPrice) {
+        log.info("No active position for {}. Checking for entry signals.", symbol);
+        TradingDecision decision = tradingStrategy.generateSignal(symbol, strategyConfig.getDefaultTimeframe());
+
+        if (decision.getSignal() == TradeSignal.LONG_ENTRY || decision.getSignal() == TradeSignal.SHORT_ENTRY) {
+            log.info("Entry signal {} for {} at approx price {}. Reason: {}", decision.getSignal(), symbol, currentPrice, decision.getReason());
+
+            Num quantityToTrade = calculateQuantity(symbol, currentPrice, strategyConfig.getFixedUsdAmountPerTrade());
+            if (quantityToTrade == null || quantityToTrade.isLessThanOrEqual(DecimalNum.ZERO)) {
+                log.warn("Could not calculate valid quantity for {}. Skipping trade.", symbol);
+                return; // Return from this helper method
+            }
+
+            String orderSide = (decision.getSignal() == TradeSignal.LONG_ENTRY) ? "BUY" : "SELL";
+            NewOrderResponseDto orderResponse = orderService.placeNewOrder(symbol, orderSide, "MARKET", null, quantityToTrade.doubleValue(), null);
+
+            if (orderResponse != null && ("FILLED".equalsIgnoreCase(orderResponse.getStatus()) || "NEW".equalsIgnoreCase(orderResponse.getStatus()) || orderResponse.getStatus().contains("SIMULATED"))) {
+                Num executedPrice = (orderResponse.getCummulativeQuoteQty() != null && DecimalNum.valueOf(orderResponse.getExecutedQty()).isPositive()) ?
+                    DecimalNum.valueOf(orderResponse.getCummulativeQuoteQty()).dividedBy(DecimalNum.valueOf(orderResponse.getExecutedQty())) :
+                    currentPrice;
+
+                ActivePositionDto.PositionSide side = (orderSide.equals("BUY")) ? ActivePositionDto.PositionSide.LONG : ActivePositionDto.PositionSide.SHORT;
+                ActivePositionDto newPosition = new ActivePositionDto(
+                        symbol,
+                        executedPrice,
+                        DecimalNum.valueOf(orderResponse.getExecutedQty()),
+                        side,
+                        DecimalNum.valueOf(latestCandle.getLowPrice()),
+                        DecimalNum.valueOf(latestCandle.getHighPrice())
+                );
+                positionService.updatePosition(newPosition);
+                String notes = "Entry order placed. " + decision.getReason();
+                tradeLoggerService.logTrade(decision, orderResponse, notes);
+                notificationService.sendMessage(String.format("Trade Alert: %s %s @ %s. %s. Order ID: %s",
+                        decision.getSignal(), symbol, executedPrice.toString(), notes, orderResponse.getOrderId()));
+                log.info("Successfully opened position: {}", newPosition);
+            } else {
+                String failureReason = orderResponse != null ? orderResponse.getStatus() + " - " + orderResponse.getReason() : "Order placement failed, null response.";
+                log.error("Failed to place entry order for {}. Reason: {}", symbol, failureReason);
+                notificationService.sendMessage(String.format("Order Error: Failed to %s %s. Reason: %s", orderSide, symbol, failureReason));
+                tradeLoggerService.logTrade(decision, orderResponse, "Entry order placement failed: " + failureReason);
+            }
+        } else {
+            log.info("Signal for {} is {}. No action taken.", symbol, decision.getSignal());
+        }
+    }
+
+    private boolean processExitStrategyAndExecuteOrder(ActivePositionDto position, List<Candlestick> candles, Candlestick latestCandle) { // Renamed
         Num currentPrice = DecimalNum.valueOf(latestCandle.getClosePrice());
         String exitReason = null;
         TradeSignal exitSignal = null;

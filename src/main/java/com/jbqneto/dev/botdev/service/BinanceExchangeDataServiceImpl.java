@@ -19,10 +19,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@Slf4j // Added Lombok annotation
+@Slf4j
 public class BinanceExchangeDataServiceImpl implements ExchangeDataService {
 
-    // private static final Logger logger = LoggerFactory.getLogger(BinanceExchangeDataServiceImpl.class); // Removed
     private final SpotClient spotClient;
     private final BinanceConfig binanceConfig;
 
@@ -95,31 +94,36 @@ public class BinanceExchangeDataServiceImpl implements ExchangeDataService {
             ObjectMapper objectMapper = new ObjectMapper();
             List<List<Object>> klineData = objectMapper.readValue(result, new TypeReference<List<List<Object>>>(){});
 
-            return klineData.stream().map(klineEntry -> {
-                try {
-                    return new Candlestick(
-                        ((Number) klineEntry.get(0)).longValue(),    // Open time
-                        klineEntry.get(1).toString(),                // Open
-                        klineEntry.get(2).toString(),                // High
-                        klineEntry.get(3).toString(),                // Low
-                        klineEntry.get(4).toString(),                // Close
-                        klineEntry.get(5).toString(),                // Volume
-                        ((Number) klineEntry.get(6)).longValue(),    // Close time
-                        klineEntry.get(7).toString(),                // Quote asset volume
-                        ((Number) klineEntry.get(8)).intValue(),     // Number of trades
-                        klineEntry.get(9).toString(),                // Taker buy base asset volume
-                        klineEntry.get(10).toString()                // Taker buy quote asset volume
-                        // klineEntry.get(11) is "Ignore."
-                    );
-                } catch (Exception e) {
-                    log.error("Error parsing individual kline entry for symbol {}: {}. Entry: {}", symbol, e.getMessage(), klineEntry, e); // logger to log
-                    return null;
-                }
-            }).filter(candlestick -> candlestick != null).collect(Collectors.toList());
+            return klineData.stream()
+                            .map(klineEntry -> mapKlineEntryToCandlestick(klineEntry, symbol))
+                            .filter(candlestick -> candlestick != null)
+                            .collect(Collectors.toList());
 
         } catch (Exception e) { // Catches JsonProcessingException from objectMapper and other exceptions
-            log.error("Error fetching or parsing candlestick data for symbol {}: {}", symbol, e.getMessage(), e); // logger to log
+            log.error("Error fetching or parsing candlestick data for symbol {}: {}", symbol, e.getMessage(), e);
             return new ArrayList<>();
+        }
+    }
+
+    private Candlestick mapKlineEntryToCandlestick(List<Object> klineEntry, String symbolForLogging) {
+        try {
+            return new Candlestick(
+                ((Number) klineEntry.get(0)).longValue(),    // Open time
+                klineEntry.get(1).toString(),                // Open
+                klineEntry.get(2).toString(),                // High
+                klineEntry.get(3).toString(),                // Low
+                klineEntry.get(4).toString(),                // Close
+                klineEntry.get(5).toString(),                // Volume
+                ((Number) klineEntry.get(6)).longValue(),    // Close time
+                klineEntry.get(7).toString(),                // Quote asset volume
+                ((Number) klineEntry.get(8)).intValue(),     // Number of trades
+                klineEntry.get(9).toString(),                // Taker buy base asset volume
+                klineEntry.get(10).toString()                // Taker buy quote asset volume
+                // klineEntry.get(11) is "Ignore."
+            );
+        } catch (Exception e) {
+            log.error("Error parsing individual kline entry for symbol {}: {}. Entry: {}", symbolForLogging, e.getMessage(), klineEntry, e);
+            return null;
         }
     }
 }

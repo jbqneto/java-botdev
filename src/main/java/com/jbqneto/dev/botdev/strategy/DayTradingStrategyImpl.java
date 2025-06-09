@@ -17,10 +17,8 @@ import org.ta4j.core.num.DecimalNum; // Using DecimalNum for comparisons
 import java.util.List;
 
 @Service
-@Slf4j // Added
+@Slf4j
 public class DayTradingStrategyImpl implements TradingStrategy {
-
-    // private static final Logger logger = LoggerFactory.getLogger(DayTradingStrategyImpl.class); // Removed
 
     private final ExchangeDataService exchangeDataService;
     private final TechnicalIndicatorService technicalIndicatorService;

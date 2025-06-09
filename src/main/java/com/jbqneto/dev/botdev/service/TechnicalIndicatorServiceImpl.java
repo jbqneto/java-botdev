@@ -27,10 +27,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@Slf4j // Added
+@Slf4j
 public class TechnicalIndicatorServiceImpl implements TechnicalIndicatorService {
-
-    // private static final Logger logger = LoggerFactory.getLogger(TechnicalIndicatorServiceImpl.class); // Removed
 
     private BarSeries convertToBarSeries(List<Candlestick> candlesticks, String seriesName) {
         if (candlesticks == null || candlesticks.isEmpty()) {
@@ -38,35 +36,7 @@ public class TechnicalIndicatorServiceImpl implements TechnicalIndicatorService 
         }
 
         List<Bar> bars = candlesticks.stream()
-                .map(candle -> {
-                    try {
-                        ZonedDateTime closeTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(candle.getCloseTime()), ZoneId.systemDefault());
-                        // TA4J expects the duration of the bar. If openTime is available and represents the start of the period:
-                        // Duration duration = Duration.between(
-                        // ZonedDateTime.ofInstant(Instant.ofEpochMilli(candle.getOpenTime()), ZoneId.systemDefault()),
-                        // closeTime
-                        // );
-                        // If not, and we only have close time, we might need to infer duration based on interval,
-                        // or use a default if intervals are consistent. For now, let's assume a fixed duration (e.g., 1 minute)
-                        // if openTime is not used to derive it.
-                        // However, kline data usually implies the duration from the interval between open times.
-                        // For simplicity in TA4J bar creation if duration is tricky: use endTime and a common period.
-                        // Let's assume candlesticks are ordered and represent a consistent interval.
-                        // The addBar method used below (the one with 6 args) does not require duration but end time.
-
-                        return BaseBar.builder(DecimalNum::valueOf, String.class)
-                                .timePeriod(closeTime) // TA4J uses end time of the period for ZonedDateTime
-                                .openPrice(candle.getOpenPrice())
-                                .highPrice(candle.getHighPrice())
-                                .lowPrice(candle.getLowPrice())
-                                .closePrice(candle.getClosePrice())
-                                .volume(candle.getVolume())
-                                .build();
-                    } catch (Exception e) {
-                        log.error("Error converting candlestick to bar: {}. Candlestick: {}", e.getMessage(), candle, e); // logger to log
-                        return null;
-                    }
-                })
+                .map(this::mapCandlestickToTa4jBar) // Extracted to method reference
                 .filter(bar -> bar != null)
                 .collect(Collectors.toList());
 
@@ -75,11 +45,29 @@ public class TechnicalIndicatorServiceImpl implements TechnicalIndicatorService 
         return barSeries;
     }
 
+    private Bar mapCandlestickToTa4jBar(Candlestick candle) {
+        try {
+            ZonedDateTime closeTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(candle.getCloseTime()), ZoneId.systemDefault());
+            // For TA4J, the time associated with a bar is typically its end time.
+            // Duration can be inferred by TA4J if bars are added sequentially or if a consistent time period is used.
+            return BaseBar.builder(DecimalNum::valueOf, String.class)
+                    .timePeriod(closeTime)
+                    .openPrice(candle.getOpenPrice())
+                    .highPrice(candle.getHighPrice())
+                    .lowPrice(candle.getLowPrice())
+                    .closePrice(candle.getClosePrice())
+                    .volume(candle.getVolume())
+                    .build();
+        } catch (Exception e) {
+            log.error("Error converting candlestick to bar: {}. Candlestick: {}", e.getMessage(), candle, e);
+            return null;
+        }
+    }
 
     @Override
     public Num calculateVWAP(List<Candlestick> candlesticks, int period) {
         if (candlesticks == null || candlesticks.size() < period) {
-            log.warn("Not enough candlesticks to calculate VWAP for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size()); // logger to log
+            log.warn("Not enough candlesticks to calculate VWAP for period {}. Need {}, got {}.", period, period, candlesticks == null ? 0 : candlesticks.size());
             return null;
         }
         BarSeries series = convertToBarSeries(candlesticks, "VWAP_Series");
